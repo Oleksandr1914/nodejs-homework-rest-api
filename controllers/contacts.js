@@ -1,14 +1,16 @@
 const service = require("../model/service");
-const { schema, updateFavoriteSchema } = require("../model/schemas/schemas");
+const { schema, updateFavoriteSchema } = require("../model/schemas/contacts");
 
 const get = async (req, res, next) => {
   try {
-    const results = await service.getAll();
+    const { _id: owner } = req.user;
+    const results = await service.getAll({ owner }).populate("owner", " email");
     res.json(results);
   } catch (err) {
     next(err);
   }
 };
+
 const getById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -33,7 +35,9 @@ const post = async (req, res, next) => {
         message: "missing required name field",
       });
     }
-    const result = await service.create(req.body);
+
+    const { _id: owner } = req.user;
+    const result = await service.create({ ...req.body, owner });
     res.status(201).json(result);
   } catch (error) {
     next(error);
