@@ -2,17 +2,18 @@ const express = require("express");
 
 const router = express.Router();
 const contacts = require("../../controllers/contacts");
+const { authenticate } = require("../../middleware/authenticate");
 
-router.get("/", contacts.get);
+router.get("/", authenticate, contacts.get);
 
-router.get("/:id", contacts.getById);
+router.get("/:id", authenticate, contacts.getById);
 
-router.post("/", contacts.post);
+router.post("/", authenticate, contacts.post);
 
-router.put("/:id", contacts.updateById);
+router.put("/:id", authenticate, contacts.updateById);
 
-router.patch("/:id/favorite", contacts.updateFavorite);
+router.patch("/:id/favorite", authenticate, contacts.updateFavorite);
 
-router.delete("/:id", contacts.removeById);
+router.delete("/:id", authenticate, contacts.removeById);
 
 module.exports = router;
