@@ -6,8 +6,11 @@ const gravatar = require("gravatar");
 const path = require("path");
 const fs = require("fs").promises;
 const Jimp = require("jimp");
+const { nanoid } = require("nanoid");
+const sendEmail = require("./sendEmail");
 
 const { SECRET_KEY } = process.env;
+const { BASE_URL } = process.env;
 
 const register = async (req, res) => {
   const { email, password } = req.body;
@@ -39,12 +42,24 @@ const register = async (req, res) => {
     d: "404",
   });
 
+  const verificationToken = nanoid();
+
   const hashPassword = await bcrypt.hash(password, 10);
   const result = await User.create({
     email,
     password: hashPassword,
     avatarURL,
+    verificationToken,
   });
+
+  const mail = {
+    to: email,
+    subject: "Please, confirm you email",
+    html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${verificationToken}">Confirm</>`,
+  };
+
+  await sendEmail(mail);
+
   res.status(201).json({
     Status: "201 Created",
     "Content-Type": "application / json",
@@ -62,7 +77,7 @@ const login = async (req, res) => {
   const user = await User.findOne({ email });
 
   const passwordCompare = await bcrypt.compare(password, user.password);
-  if (!passwordCompare || !user) {
+  if (!passwordCompare || !user || !user.verify) {
     return res.status(401).json({
       Status: "401 Unauthorized",
       ResponseBody: {
@@ -139,10 +154,34 @@ const updateAvatar = async (req, res) => {
   });
 };
 
+const verify = async (req, res) => {
+  const { verificationToken } = req.params;
+  const user = await User.findOne({ verificationToken });
+  if (!user) {
+    return res.status(404).json({
+      Status: "404 Not Found",
+      ResponseBody: {
+        message: "User not found",
+      },
+    });
+  }
+  await User.findByIdAndUpdate(user._id, {
+    verify: true,
+    verificationToken: null,
+  });
+  res.status(200).json({
+    Status: "200 OK",
+    ResponseBody: {
+      message: "Verification successful",
+    },
+  });
+};
+
 module.exports = {
   register,
   login,
   logout,
   curent,
   updateAvatar,
+  verify,
 };
